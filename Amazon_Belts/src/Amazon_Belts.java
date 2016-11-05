@@ -18,18 +18,18 @@ public interface Amazon_Belts {
 	 * 3. The belt consists of two parts, to the packer, and to the dock, split exactly down the middle
 	 * 
 	 * To-Do:
-	 * 1. Create overflow array for new items
-	 * 2. Create ship log for finished Boxes
-	 * 3. Create array for current items on each belt
-	 * 
+	 * 1. Create a getItemloc();
+	 * 2. Create a runable, testable code
 	 */
 	class Belt{
 		float beltSpeed = 1;
 		boolean verbose = false;
 		boolean isPaused = false;
-		double time = 0.0;
+		float time = 0;
 		Bin temp1 = null;
 		Box temp2 = null;
+		ArrayList<loglist> Log = new ArrayList<loglist>();
+		Queue<Item> newitem = new LinkedList<Item>();
 
 		
 		public Belt(float speed, boolean verbose, boolean isPaused){
@@ -39,46 +39,69 @@ public interface Amazon_Belts {
 			
 		}
 		
-		public int getLoc(String itemNum, int whichbelt){		
-			if(whichbelt == 1){
-				for(int i = 0; i < toPacker.size(); i++){
-					temp1 = toPacker.get(i);
-					if(Bin.getbinID(temp1) == itemNum){
-						if(verbose == true){
-							System.out.println("The item is in belt 1, spot " + i);
-						}
-						return 0;
-					}					
-				}
-			}
-			else if(whichbelt == 2){
-				for(int j = 0; j < toDock.size(); j++){
-					temp2 = toDock.get(j);
-					if(Box.getboxID(temp2) == itemNum){
-						if(verbose == true){
-							System.out.println("The item is in belt 2, spot " + j);
-						}
-						return 1;
-					}				    
-				}
+		public int getBinLoc(String itemNum){		
 
-			}
+			for(int i = 0; i < toPacker.size(); i++){
+				temp1 = toPacker.get(i);
+				if(Bin.getbinID(temp1) == itemNum){
+					if(verbose == true){
+						System.out.println("The item is in belt 1, spot " + i);
+					}
+					return 0;
+				}					
+			}			
+			for(int j = 0; j < toDock.size(); j++){
+				temp2 = toDock.get(j);
+				if(Box.getboxID(temp2) == itemNum){
+					if(verbose == true){
+						System.out.println("The item is in belt 2, spot " + j);
+					}
+					return 1;
+				}				    
+			}			
 			if(verbose == true){
 				System.out.println("Your order is not in processing");
 			}
 			return -1;
 			
 		}
-		public void binList(){
-			for(int i = 0; i <= toPacker.size(); i++){
-				System.out.println((toPacker).get(i));
+		public void updatelog(String ID){
+			int temp = getBinLoc(ID);
+			
+			for(int i = 0; i < Log.size(); i++){
+				if(Log.get(i).ID == ID){
+					loglist temploglist = new loglist(ID, temp, -1);
+					Log.set(i, temploglist);
+				}
+				if(verbose == true){
+					System.out.println("Update log: ID " + ID + " is now a bin in the log");
+				}
 			}
+		}
+		public void addItem(Item temp){
+			newitem.add(temp);
+			if(verbose == true){
+				System.out.println("NewItem: new item inside the newitem queue");
+			}
+		}
+		public void updatefinal(String ID){			
+			for(int i = 0; i < Log.size(); i++){
+				if(Log.get(i).ID == ID){
+					loglist temploglist = new loglist(ID, 3, time);
+					Log.set(i, temploglist);
+					
+				}
+			}
+			
 		}
 		public void addBin(Bin temp){
 			toPacker.add(temp);
+			loglist temp1 = new loglist(temp.ID, 1, -1);
+			Log.add(temp1);
 		}
 		public void addBox(Box temp){
 			toDock.add(temp);
+			updatelog(temp.ID);
 		}
 		public void start(){
 			isPaused = false;
@@ -92,35 +115,44 @@ public interface Amazon_Belts {
 				System.out.println("The belt has stopped");
 			}
 		}
-		public void getTime(double pushtime){
+		public void getTime(float pushtime){
 			this.time = pushtime;
 		}
-		public void move(double pushtime, Bin pick){
+		public void move(float pushtime){
 			ArrayList<Bin> temparray = new ArrayList<Bin>();
 			
 			if(pushtime == (this.time + beltSpeed)){
-				if(toPacker.size() <= 10){
-					addBin(pick);
+				if(toPacker.size() < 10){
+					if(!(newitem.isEmpty())){
+						Bin tempitem = new Bin(newitem.poll().name);
+						addBin(tempitem);
+					}
+					
 				}
-				else{
-					if(verbose == true){
-						System.out.println("toPacker: The belt is full");
-					}					
-					stop();
-				}
-				if(toPacker.size() == 10){
+
+				else if(toPacker.size() == 10){
 					if(toDock.size() <= 10){
-						if(!(Bin.getbinID(toPacker.get(9)) == "-1")){					
-							Box tempbox = new Box(Bin.getbinID(pick));
+						if(!(Bin.getbinID(toPacker.get(9)) == "null")){	
+							Bin tempitem1 = toPacker.get(9);
+							Box tempbox = new Box(Bin.getbinID(tempitem1));
 							addBox(tempbox);
 							if(verbose == true){
 								System.out.println("toPacker/toDock: Order # " + tempbox.ID + " has been packaged and in transit");
 							}
 						}
 					}
+					else{
+						if(verbose == true){
+							System.out.println("toPacker: The belt is full and it is stopped");
+						}					
+						stop();
+					}
 				}
+				
 				if(toDock.size() == 10){
 					Box finalbox = toDock.get(9);
+					toDock.remove(9);
+					updatefinal(finalbox.ID);
 					if(verbose == true){
 						System.out.println("toDock: Order # " + finalbox.ID + " has been loaded onto the dock");
 					}
@@ -170,7 +202,21 @@ public interface Amazon_Belts {
 			return temp.ID;
 		}
 	}
+	class loglist{
+		String ID;
+		int whichbelt;
+		float whattime;
+		public loglist(String ID, int whichbelt, float whattime){
+			this.ID = ID;
+			this.whichbelt = whichbelt;
+			this.whattime = whattime;
+		}
+	}
 	class Run{
 		
 	}
+	public static void main(String [] args){
+		
+	}
 }
+
