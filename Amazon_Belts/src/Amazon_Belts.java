@@ -16,9 +16,15 @@ public interface Amazon_Belts {
 	 * 1. The belt itself has 20 spaces
 	 * 2. Each space can take one bin
 	 * 3. The belt consists of two parts, to the packer, and to the dock, split exactly down the middle
+	 * 
+	 * To-Do:
+	 * 1. Create overflow array for new items
+	 * 2. Create ship log for finished Boxes
+	 * 3. Create array for current items on each belt
+	 * 
 	 */
 	class Belt{
-		float beltSpeed = 0;
+		float beltSpeed = 1;
 		boolean verbose = false;
 		boolean isPaused = false;
 		double time = 0.0;
@@ -33,26 +39,26 @@ public interface Amazon_Belts {
 			
 		}
 		
-		public int getLoc(String BinNum, int whichbelt){		
+		public int getLoc(String itemNum, int whichbelt){		
 			if(whichbelt == 1){
 				for(int i = 0; i < toPacker.size(); i++){
 					temp1 = toPacker.get(i);
-					if(Bin.getbinID(temp1) == BinNum){
+					if(Bin.getbinID(temp1) == itemNum){
 						if(verbose == true){
-							System.out.println("The bin is in belt 1, spot " + i);
+							System.out.println("The item is in belt 1, spot " + i);
 						}
-						return i;
+						return 0;
 					}					
 				}
 			}
 			else if(whichbelt == 2){
 				for(int j = 0; j < toDock.size(); j++){
 					temp2 = toDock.get(j);
-					if(Box.getboxID(temp2) == BinNum){
+					if(Box.getboxID(temp2) == itemNum){
 						if(verbose == true){
-							System.out.println("The box is in belt 2, spot " + j);
+							System.out.println("The item is in belt 2, spot " + j);
 						}
-						return j;
+						return 1;
 					}				    
 				}
 
@@ -90,6 +96,7 @@ public interface Amazon_Belts {
 			this.time = pushtime;
 		}
 		public void move(double pushtime, Bin pick){
+			ArrayList<Bin> temparray = new ArrayList<Bin>();
 			
 			if(pushtime == (this.time + beltSpeed)){
 				if(toPacker.size() <= 10){
@@ -118,6 +125,16 @@ public interface Amazon_Belts {
 						System.out.println("toDock: Order # " + finalbox.ID + " has been loaded onto the dock");
 					}
 				}
+				Bin nullbin = new Bin("null");
+				temparray.clear();
+				temparray.add(0,nullbin);
+				for(int i = 0; i < toPacker.size()-1; i++){
+					Bin temp1 = toPacker.get(i);					
+					temparray.add(i+1, temp1);
+				}
+				toPacker.clear();
+				for(int j = 0; j < toPacker.size(); j++)
+					toPacker.add(temparray.get(j));
 			}
 		}
 	}
